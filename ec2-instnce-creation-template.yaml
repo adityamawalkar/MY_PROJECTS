@@ -1,0 +1,125 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: A sample template
+
+Parameters:
+  vpcname: 
+    Type: String
+    Description: Provide the vpc name
+    Default: First Vpc
+
+  cidrblock:
+    Type: String
+    Description: Provide the CIDR Block
+    Default: 192.168.0.0/16
+
+  subnet01: 
+    Type: String
+    Description: Provide the Subnet name
+    Default: Sub01
+
+  subnet01CIDR:
+    Type: String
+    Description: Provide the Subnet CIDR
+    Default: 192.168.1.0/24
+
+
+
+
+
+Resources:
+  VPC01:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref cidrblock
+      Tags:
+      - Key: Name
+        Value: !Ref vpcname
+  
+  mySubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: 
+        Ref: VPC01
+      CidrBlock: 
+        Ref: subnet01CIDR
+      AvailabilityZone: "us-east-1a"
+      Tags:
+      - Key: env
+        Value: dev
+        
+  
+  myroute:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:  
+        Ref: VPC01
+      Tags:
+      - Key: env
+        Value: dev
+
+  editroute:
+    Type: AWS::EC2::Route
+    Properties:
+     DestinationCidrBlock: 0.0.0.0/0
+     RouteTableId: 
+      Ref: myroute
+     GatewayId:
+      Ref: myIG
+  
+  myIG:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: env
+        Value: dev
+  
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: VPC01
+      InternetGatewayId:
+        Ref: myIG
+  
+  mySG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group
+      VpcId: 
+        Ref: VPC01
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+  
+  Ec2Instance: 
+    Type: AWS::EC2::Instance
+    Properties: 
+      InstanceType: t2.micro
+      NetworkInterfaces: 
+      - AssociatePublicIpAddress: "true"
+        DeviceIndex: "0"
+        SubnetId: 
+          Ref: mySubnet 
+        GroupSet: 
+          - Ref: mySG
+      
+      ImageId : "ami-0aa7d40eeae50c9a9"
+      KeyName: "ex-key"
+Outputs:
+  myVPCID:
+    Description: The ID of the VPC
+    Value: !Ref VPC01
+    Export:
+      Name: !Sub "${AWS::StackName}-myVPCID"
+  
+  mysbID:
+    Description: The ID of the subnet
+    Value: !Ref mySubnet
+    Export:
+      Name: !Sub "${AWS::StackName}-mysbCID"
+  
